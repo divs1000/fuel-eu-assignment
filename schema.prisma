@@ -1,0 +1,70 @@
+// Prisma schema for FuelEU-related entities
+// Based conceptually on FuelEU Maritime Regulation (EU) 2023/1805,
+// notably Articles 20 (Banking) and 21 (Pooling).
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+/// Route-level data used to compute GHG intensity and compliance balance.
+model Route {
+  id               String   @id @default(uuid())
+  vesselType       String
+  fuelType         String
+  year             Int
+
+  /// GHG intensity of energy used on board in gCO2eq/MJ.
+  ghgIntensity     Float
+
+  /// Fuel consumption in metric tons for the reporting period.
+  fuelConsumption  Float
+
+  /// Distance sailed in nautical miles (or km, depending on implementation choice).
+  distance         Float
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+/// Banking of compliance surpluses/deficits per ship and year (Article 20).
+model Banking {
+  id        String   @id @default(uuid())
+
+  /// Identifier of the ship (e.g. IMO number or internal ID).
+  shipId    String
+
+  /// Reporting year of the banked balance.
+  year      Int
+
+  /// Banked balance value (can be positive for surplus or negative for deficit).
+  balance   Float
+
+  /// Status of the banked balance (e.g. "ACTIVE", "USED", "EXPIRED").
+  status    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shipId, year])
+}
+
+/// Pooling arrangements between ships/companies (Article 21).
+model Pooling {
+  id        String   @id @default(uuid())
+
+  /// External identifier of the pool if needed.
+  poolId    String   @unique
+
+  /// Members participating in the pool.
+  /// Stored as JSON for flexibility (e.g. list of shipIds, shares, contracts).
+  members   Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
